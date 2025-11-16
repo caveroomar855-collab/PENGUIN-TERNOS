@@ -6,6 +6,7 @@ import '../models/articulo.dart';
 import '../providers/clientes_provider.dart';
 import '../providers/articulos_provider.dart';
 import '../providers/ventas_provider.dart';
+import '../services/clientes_service.dart';
 
 class NuevaVentaScreen extends StatefulWidget {
   const NuevaVentaScreen({Key? key}) : super(key: key);
@@ -17,12 +18,16 @@ class NuevaVentaScreen extends StatefulWidget {
 class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   final _formKey = GlobalKey<FormState>();
   final _montoController = TextEditingController();
+  final _dniController = TextEditingController();
+  final _nombreController = TextEditingController();
+  final _telefonoController = TextEditingController();
 
-  Cliente? _clienteSeleccionado;
+  Cliente? _clienteEncontrado;
   String _medioPago = 'efectivo';
   List<Articulo> _articulosSeleccionados = [];
 
   bool _isLoading = false;
+  bool _buscandoCliente = false;
 
   @override
   void initState() {
@@ -36,49 +41,64 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   @override
   void dispose() {
     _montoController.dispose();
+    _dniController.dispose();
+    _nombreController.dispose();
+    _telefonoController.dispose();
     super.dispose();
   }
 
-  Future<void> _seleccionarCliente() async {
-    final clientes = context.read<ClientesProvider>().clientes;
+  Future<void> _buscarClientePorDNI(String dni) async {
+    if (dni.length < 8) return;
 
-    if (clientes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay clientes disponibles')),
-      );
-      return;
-    }
+    setState(() => _buscandoCliente = true);
 
-    final result = await showDialog<Cliente>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Seleccionar Cliente'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: clientes.length,
-            itemBuilder: (context, index) {
-              final cliente = clientes[index];
-              return ListTile(
-                title: Text(cliente.nombreCompleto),
-                subtitle: Text('DNI: ${cliente.dni}'),
-                onTap: () => Navigator.pop(context, cliente),
-              );
-            },
-          ),
+    try {
+      await context.read<ClientesProvider>().fetchClientes();
+      final clientes = context.read<ClientesProvider>().clientes;
+
+      final cliente = clientes.firstWhere(
+        (c) => c.dni == dni,
+        orElse: () => Cliente(
+          id: '',
+          dni: '',
+          nombreCompleto: '',
+          telefono: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (result != null) {
-      setState(() => _clienteSeleccionado = result);
+      if (cliente.id.isNotEmpty) {
+        setState(() {
+          _clienteEncontrado = cliente;
+          _nombreController.text = cliente.nombreCompleto;
+          _telefonoController.text = cliente.telefono;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cliente encontrado en el sistema'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _clienteEncontrado = null;
+          _nombreController.clear();
+          _telefonoController.clear();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al buscar cliente: $e')),
+        );
+      }
+    } finally {
+      setState(() => _buscandoCliente = false);
     }
   }
 
@@ -161,9 +181,9 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_clienteSeleccionado == null) {
+    if (_dniController.text.isEmpty || _nombreController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debe seleccionar un cliente')),
+        const SnackBar(content: Text('Complete los datos del cliente')),
       );
       return;
     }
@@ -178,8 +198,24 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Si el cliente no existe, crear uno nuevo
+      String clienteId;
+      if (_clienteEncontrado == null || _clienteEncontrado!.id.isEmpty) {
+        final nuevoCliente = await ClientesService.create({
+          'dni': _dniController.text,
+          'nombre_completo': _nombreController.text,
+          'telefono': _telefonoController.text,
+          'correo': '',
+        });
+        clienteId = nuevoCliente.id;
+        // Actualizar lista de clientes
+        await context.read<ClientesProvider>().fetchClientes();
+      } else {
+        clienteId = _clienteEncontrado!.id;
+      }
+
       final data = {
-        'cliente_id': _clienteSeleccionado!.id,
+        'cliente_id': clienteId,
         'medio_pago': _medioPago,
         'monto_total': double.parse(_montoController.text),
         'articulos_ids': _articulosSeleccionados.map((a) => a.id).toList(),
@@ -223,17 +259,120 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Cliente
+            // Datos del Cliente
             Card(
-              child: ListTile(
-                leading: const Icon(Icons.person, color: Colors.blue),
-                title: Text(_clienteSeleccionado?.nombreCompleto ??
-                    'Seleccionar Cliente'),
-                subtitle: _clienteSeleccionado != null
-                    ? Text('DNI: ${_clienteSeleccionado!.dni}')
-                    : null,
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: _seleccionarCliente,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Datos del Cliente',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _dniController,
+                      decoration: InputDecoration(
+                        labelText: 'DNI *',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: _buscandoCliente
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : _clienteEncontrado != null
+                                ? const Icon(Icons.check_circle,
+                                    color: Colors.green)
+                                : null,
+                      ),
+                      keyboardType: TextInputType.number,
+                      maxLength: 8,
+                      onChanged: (value) {
+                        if (value.length == 8) {
+                          _buscarClientePorDNI(value);
+                        } else {
+                          setState(() {
+                            _clienteEncontrado = null;
+                            _nombreController.clear();
+                            _telefonoController.clear();
+                          });
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Ingrese el DNI';
+                        }
+                        if (value.length != 8) {
+                          return 'El DNI debe tener 8 dígitos';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _nombreController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre Completo *',
+                        border: OutlineInputBorder(),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Ingrese el nombre completo';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _telefonoController,
+                      decoration: const InputDecoration(
+                        labelText: 'Teléfono',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.phone),
+                      ),
+                      keyboardType: TextInputType.phone,
+                      maxLength: 9,
+                    ),
+                    if (_clienteEncontrado != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  size: 16, color: Colors.green.shade700),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Cliente existente en el sistema',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
