@@ -8,6 +8,7 @@ import '../providers/clientes_provider.dart';
 import '../providers/trajes_provider.dart';
 import '../providers/articulos_provider.dart';
 import '../providers/alquileres_provider.dart';
+import '../providers/configuracion_provider.dart';
 import '../services/clientes_service.dart';
 
 class NuevoAlquilerScreen extends StatefulWidget {
@@ -127,33 +128,82 @@ class _NuevoAlquilerScreenState extends State<NuevoAlquilerScreen> {
       context: context,
       builder: (context) {
         List<Traje> selected = List.from(_trajesSeleccionados);
+        List<Traje> filteredTrajes = List.from(trajes);
+        TextEditingController searchController = TextEditingController();
+
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             title: const Text('Seleccionar Trajes'),
             content: SizedBox(
               width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: trajes.length,
-                itemBuilder: (context, index) {
-                  final traje = trajes[index];
-                  final isSelected = selected.contains(traje);
-                  return CheckboxListTile(
-                    title: Text(traje.nombre),
-                    subtitle: Text(
-                        'S/ ${traje.precioAlquiler} - Disponibles: ${traje.cantidadDisponible}'),
-                    value: isSelected,
+              height: 500,
+              child: Column(
+                children: [
+                  // Buscador
+                  TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      labelText: 'Buscar traje',
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                setState(() {
+                                  searchController.clear();
+                                  filteredTrajes = List.from(trajes);
+                                });
+                              },
+                            )
+                          : null,
+                    ),
                     onChanged: (value) {
                       setState(() {
-                        if (value == true) {
-                          selected.add(traje);
+                        if (value.isEmpty) {
+                          filteredTrajes = List.from(trajes);
                         } else {
-                          selected.remove(traje);
+                          filteredTrajes = trajes
+                              .where((t) => t.nombre
+                                  .toLowerCase()
+                                  .contains(value.toLowerCase()))
+                              .toList();
                         }
                       });
                     },
-                  );
-                },
+                  ),
+                  const SizedBox(height: 16),
+                  // Lista de trajes
+                  Expanded(
+                    child: filteredTrajes.isEmpty
+                        ? const Center(
+                            child: Text('No se encontraron trajes'),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: filteredTrajes.length,
+                            itemBuilder: (context, index) {
+                              final traje = filteredTrajes[index];
+                              final isSelected = selected.contains(traje);
+                              return CheckboxListTile(
+                                title: Text(traje.nombre),
+                                subtitle: Text(
+                                    'S/ ${traje.precioAlquiler} - Disponibles: ${traje.cantidadDisponible}'),
+                                value: isSelected,
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      selected.add(traje);
+                                    } else {
+                                      selected.remove(traje);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
             actions: [
@@ -163,7 +213,7 @@ class _NuevoAlquilerScreenState extends State<NuevoAlquilerScreen> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, selected),
-                child: const Text('Aceptar'),
+                child: Text('Aceptar (${selected.length})'),
               ),
             ],
           ),
@@ -193,33 +243,89 @@ class _NuevoAlquilerScreenState extends State<NuevoAlquilerScreen> {
       context: context,
       builder: (context) {
         List<Articulo> selected = List.from(_articulosSeleccionados);
+        List<Articulo> filteredArticulos = List.from(articulos);
+        TextEditingController searchController = TextEditingController();
+
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             title: const Text('Seleccionar Artículos'),
             content: SizedBox(
               width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: articulos.length,
-                itemBuilder: (context, index) {
-                  final articulo = articulos[index];
-                  final isSelected = selected.contains(articulo);
-                  return CheckboxListTile(
-                    title: Text(articulo.nombre),
-                    subtitle: Text(
-                        '${articulo.tipo.displayName} - Talla ${articulo.talla} - S/ ${articulo.precioAlquiler}'),
-                    value: isSelected,
+              height: 500,
+              child: Column(
+                children: [
+                  // Buscador
+                  TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      labelText: 'Buscar artículo',
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                setState(() {
+                                  searchController.clear();
+                                  filteredArticulos = List.from(articulos);
+                                });
+                              },
+                            )
+                          : null,
+                    ),
                     onChanged: (value) {
                       setState(() {
-                        if (value == true) {
-                          selected.add(articulo);
+                        if (value.isEmpty) {
+                          filteredArticulos = List.from(articulos);
                         } else {
-                          selected.remove(articulo);
+                          filteredArticulos = articulos
+                              .where((a) =>
+                                  a.nombre
+                                      .toLowerCase()
+                                      .contains(value.toLowerCase()) ||
+                                  a.tipo.displayName
+                                      .toLowerCase()
+                                      .contains(value.toLowerCase()) ||
+                                  a.talla
+                                      .toLowerCase()
+                                      .contains(value.toLowerCase()))
+                              .toList();
                         }
                       });
                     },
-                  );
-                },
+                  ),
+                  const SizedBox(height: 16),
+                  // Lista de artículos
+                  Expanded(
+                    child: filteredArticulos.isEmpty
+                        ? const Center(
+                            child: Text('No se encontraron artículos'),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: filteredArticulos.length,
+                            itemBuilder: (context, index) {
+                              final articulo = filteredArticulos[index];
+                              final isSelected = selected.contains(articulo);
+                              return CheckboxListTile(
+                                title: Text(articulo.nombre),
+                                subtitle: Text(
+                                    '${articulo.tipo.displayName} - Talla ${articulo.talla} - S/ ${articulo.precioAlquiler}'),
+                                value: isSelected,
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      selected.add(articulo);
+                                    } else {
+                                      selected.remove(articulo);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
             actions: [
@@ -229,7 +335,7 @@ class _NuevoAlquilerScreenState extends State<NuevoAlquilerScreen> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, selected),
-                child: const Text('Aceptar'),
+                child: Text('Aceptar (${selected.length})'),
               ),
             ],
           ),
@@ -255,8 +361,9 @@ class _NuevoAlquilerScreenState extends State<NuevoAlquilerScreen> {
     }
     _montoController.text = total.toStringAsFixed(2);
 
-    // Calcular garantía (20% del monto)
-    final garantia = total * 0.2;
+    // Calcular garantía usando configuración
+    final configProvider = context.read<ConfiguracionProvider>();
+    final garantia = configProvider.calcularGarantia(total);
     _garantiaController.text = garantia.toStringAsFixed(2);
   }
 
@@ -291,6 +398,7 @@ class _NuevoAlquilerScreenState extends State<NuevoAlquilerScreen> {
           'correo': '',
         });
         clienteId = nuevoCliente.id;
+        _clienteEncontrado = nuevoCliente; // Asignar el cliente creado
         // Actualizar lista de clientes
         await context.read<ClientesProvider>().fetchClientes();
       } else {
@@ -449,6 +557,18 @@ class _NuevoAlquilerScreenState extends State<NuevoAlquilerScreen> {
                       ),
                       keyboardType: TextInputType.phone,
                       maxLength: 9,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'El teléfono es obligatorio';
+                        }
+                        if (value.length != 9) {
+                          return 'El teléfono debe tener 9 dígitos';
+                        }
+                        if (!value.startsWith('9')) {
+                          return 'El teléfono debe empezar con 9';
+                        }
+                        return null;
+                      },
                     ),
                     if (_clienteEncontrado != null)
                       Padding(

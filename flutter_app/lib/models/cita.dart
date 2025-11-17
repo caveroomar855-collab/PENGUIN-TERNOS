@@ -1,26 +1,39 @@
 import 'cliente.dart';
 
 enum TipoCita {
+  pruebas,
+  tomaMedidas,
   alquiler,
-  devolucion,
-  prueba;
+  otros;
 
   String get displayName {
     switch (this) {
+      case TipoCita.pruebas:
+        return 'Pruebas';
+      case TipoCita.tomaMedidas:
+        return 'Toma de Medidas';
       case TipoCita.alquiler:
         return 'Alquiler';
-      case TipoCita.devolucion:
-        return 'Devolución';
-      case TipoCita.prueba:
-        return 'Prueba';
+      case TipoCita.otros:
+        return 'Otros';
     }
   }
 
   static TipoCita fromString(String tipo) {
-    return TipoCita.values.firstWhere(
-      (e) => e.name == tipo.toLowerCase(),
-      orElse: () => TipoCita.alquiler,
-    );
+    final normalized = tipo.toLowerCase().replaceAll('_', '');
+    switch (normalized) {
+      case 'pruebas':
+        return TipoCita.pruebas;
+      case 'tomamedidas':
+      case 'toma_medidas':
+        return TipoCita.tomaMedidas;
+      case 'alquiler':
+        return TipoCita.alquiler;
+      case 'otros':
+        return TipoCita.otros;
+      default:
+        return TipoCita.otros;
+    }
   }
 }
 
@@ -72,9 +85,8 @@ class Cita {
     return Cita(
       id: json['id'],
       clienteId: json['cliente_id'],
-      cliente: json['cliente'] != null
-          ? Cliente.fromJson(json['cliente'])
-          : null,
+      cliente:
+          json['cliente'] != null ? Cliente.fromJson(json['cliente']) : null,
       fechaHora: DateTime.parse(json['fecha_hora']),
       tipoCita: TipoCita.fromString(json['tipo_cita']),
       descripcion: json['descripcion'],
@@ -85,11 +97,26 @@ class Cita {
   }
 
   Map<String, dynamic> toJson() {
+    String tipoString;
+    switch (tipoCita) {
+      case TipoCita.pruebas:
+        tipoString = 'pruebas';
+        break;
+      case TipoCita.tomaMedidas:
+        tipoString = 'toma_medidas';
+        break;
+      case TipoCita.alquiler:
+        tipoString = 'alquiler';
+        break;
+      case TipoCita.otros:
+        tipoString = 'otros';
+        break;
+    }
     return {
       'id': id,
       'cliente_id': clienteId,
       'fecha_hora': fechaHora.toIso8601String(),
-      'tipo_cita': tipoCita.name,
+      'tipo_cita': tipoString,
       'descripcion': descripcion,
       'estado': estado.name,
       'created_at': createdAt.toIso8601String(),

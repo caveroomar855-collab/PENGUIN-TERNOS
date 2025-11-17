@@ -37,7 +37,8 @@ enum ArticuloTipo {
 enum ArticuloEstado {
   disponible,
   alquilado,
-  mantenimiento;
+  mantenimiento,
+  perdido;
 
   String get displayName {
     switch (this) {
@@ -47,6 +48,8 @@ enum ArticuloEstado {
         return 'Alquilado';
       case ArticuloEstado.mantenimiento:
         return 'Mantenimiento';
+      case ArticuloEstado.perdido:
+        return 'Perdido';
     }
   }
 
@@ -54,6 +57,41 @@ enum ArticuloEstado {
     return ArticuloEstado.values.firstWhere(
       (e) => e.name == estado.toLowerCase(),
       orElse: () => ArticuloEstado.disponible,
+    );
+  }
+}
+
+enum EstadoDevolucion {
+  completo,
+  danado,
+  perdido;
+
+  String get displayName {
+    switch (this) {
+      case EstadoDevolucion.completo:
+        return 'Completo';
+      case EstadoDevolucion.danado:
+        return 'Dañado';
+      case EstadoDevolucion.perdido:
+        return 'Perdido';
+    }
+  }
+
+  String get descripcion {
+    switch (this) {
+      case EstadoDevolucion.completo:
+        return 'Buen estado - 24h mantenimiento';
+      case EstadoDevolucion.danado:
+        return 'Requiere reparación - 72h mantenimiento';
+      case EstadoDevolucion.perdido:
+        return 'No devuelto';
+    }
+  }
+
+  static EstadoDevolucion fromString(String estado) {
+    return EstadoDevolucion.values.firstWhere(
+      (e) => e.name == estado.toLowerCase(),
+      orElse: () => EstadoDevolucion.completo,
     );
   }
 }

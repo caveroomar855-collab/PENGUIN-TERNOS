@@ -24,7 +24,7 @@ class _NuevoArticuloScreenState extends State<NuevoArticuloScreen> {
 
   final List<Map<String, dynamic>> _tipos = [
     {'value': 'saco', 'label': 'Saco', 'icon': Icons.dry_cleaning},
-    {'value': 'pantalon', 'label': 'Pantalón', 'icon': Icons.downhill_skiing},
+    {'value': 'pantalon', 'label': 'Pantalón', 'icon': Icons.accessibility},
     {'value': 'camisa', 'label': 'Camisa', 'icon': Icons.checkroom},
     {'value': 'zapatos', 'label': 'Zapatos', 'icon': Icons.shopping_bag},
     {'value': 'corbata', 'label': 'Corbata', 'icon': Icons.style},

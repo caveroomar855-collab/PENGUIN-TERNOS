@@ -4,6 +4,8 @@ class Cliente {
   final String nombreCompleto;
   final String telefono;
   final String? correo;
+  final bool eliminado;
+  final DateTime? fechaEliminacion;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -13,6 +15,8 @@ class Cliente {
     required this.nombreCompleto,
     required this.telefono,
     this.correo,
+    this.eliminado = false,
+    this.fechaEliminacion,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -24,6 +28,10 @@ class Cliente {
       nombreCompleto: json['nombre_completo'],
       telefono: json['telefono'],
       correo: json['correo'],
+      eliminado: json['eliminado'] ?? false,
+      fechaEliminacion: json['fecha_eliminacion'] != null
+          ? DateTime.parse(json['fecha_eliminacion'])
+          : null,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -36,6 +44,8 @@ class Cliente {
       'nombre_completo': nombreCompleto,
       'telefono': telefono,
       'correo': correo,
+      'eliminado': eliminado,
+      'fecha_eliminacion': fechaEliminacion?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -47,6 +57,8 @@ class Cliente {
     String? nombreCompleto,
     String? telefono,
     String? correo,
+    bool? eliminado,
+    DateTime? fechaEliminacion,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -56,6 +68,8 @@ class Cliente {
       nombreCompleto: nombreCompleto ?? this.nombreCompleto,
       telefono: telefono ?? this.telefono,
       correo: correo ?? this.correo,
+      eliminado: eliminado ?? this.eliminado,
+      fechaEliminacion: fechaEliminacion ?? this.fechaEliminacion,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -21,7 +21,7 @@ class _InventarioScreenState extends State<InventarioScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // Cambiado de 2 a 3
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TrajesProvider>().fetchTrajes();
       context.read<ArticulosProvider>().fetchArticulos();
@@ -44,6 +44,7 @@ class _InventarioScreenState extends State<InventarioScreen>
           tabs: const [
             Tab(text: 'Trajes', icon: Icon(Icons.checkroom)),
             Tab(text: 'Artículos', icon: Icon(Icons.inventory_2)),
+            Tab(text: 'Por Estado', icon: Icon(Icons.filter_list)),
           ],
         ),
         actions: [
@@ -61,6 +62,7 @@ class _InventarioScreenState extends State<InventarioScreen>
         children: [
           _buildTrajesTab(),
           _buildArticulosTab(),
+          _buildEstadosTab(), // Nueva pestaña
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -208,6 +210,191 @@ class _InventarioScreenState extends State<InventarioScreen>
     );
   }
 
+  Widget _buildEstadosTab() {
+    return DefaultTabController(
+      length: 4,
+      child: Column(
+        children: [
+          Material(
+            color: Colors.grey[100],
+            child: TabBar(
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.orange,
+              tabs: const [
+                Tab(
+                    text: 'Disponibles',
+                    icon: Icon(Icons.check_circle, size: 20)),
+                Tab(text: 'Alquilados', icon: Icon(Icons.schedule, size: 20)),
+                Tab(text: 'Mantenimiento', icon: Icon(Icons.build, size: 20)),
+                Tab(text: 'Perdidos', icon: Icon(Icons.cancel, size: 20)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Consumer2<ArticulosProvider, TrajesProvider>(
+              builder: (context, articulosProvider, trajesProvider, _) {
+                return TabBarView(
+                  children: [
+                    _buildEstadoList(ArticuloEstado.disponible,
+                        articulosProvider, trajesProvider),
+                    _buildEstadoList(ArticuloEstado.alquilado,
+                        articulosProvider, trajesProvider),
+                    _buildEstadoList(ArticuloEstado.mantenimiento,
+                        articulosProvider, trajesProvider),
+                    _buildEstadoList(ArticuloEstado.perdido, articulosProvider,
+                        trajesProvider),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstadoList(ArticuloEstado estado,
+      ArticulosProvider articulosProvider, TrajesProvider trajesProvider) {
+    final articulosFiltrados =
+        articulosProvider.articulos.where((a) => a.estado == estado).toList();
+    final trajesFiltrados =
+        trajesProvider.trajes.where((t) => t.estado == estado).toList();
+
+    if (articulosFiltrados.isEmpty && trajesFiltrados.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _getIconForEstado(estado),
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No hay artículos ${estado.displayName.toLowerCase()}',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (trajesFiltrados.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'TRAJES (${trajesFiltrados.length})',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          ...trajesFiltrados.map((traje) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _getEstadoColor(estado),
+                    child: const Icon(Icons.checkroom, color: Colors.white),
+                  ),
+                  title: Text(traje.nombre),
+                  subtitle: Text(traje.descripcion ?? 'Sin descripción'),
+                  trailing: traje.estado == ArticuloEstado.mantenimiento &&
+                          traje.fechaFinMantenimiento != null
+                      ? Chip(
+                          label: Text(
+                            _formatTiempoRestante(traje.fechaFinMantenimiento!),
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          backgroundColor: Colors.amber[100],
+                        )
+                      : null,
+                  onTap: () => _showTrajeDetails(context, traje),
+                ),
+              )),
+          const SizedBox(height: 16),
+        ],
+        if (articulosFiltrados.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'ARTÍCULOS (${articulosFiltrados.length})',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          ...articulosFiltrados.map((articulo) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _getEstadoColor(estado),
+                    child: Text(
+                      '${articulo.cantidad}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  title: Text('${articulo.nombre} - ${articulo.talla}'),
+                  subtitle: Text('Tipo: ${articulo.tipo.displayName}'),
+                  trailing: articulo.estado == ArticuloEstado.mantenimiento &&
+                          articulo.fechaFinMantenimiento != null
+                      ? Chip(
+                          label: Text(
+                            _formatTiempoRestante(
+                                articulo.fechaFinMantenimiento!),
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          backgroundColor: Colors.amber[100],
+                        )
+                      : null,
+                  onTap: () => _showArticuloDetails(context, articulo),
+                ),
+              )),
+        ],
+      ],
+    );
+  }
+
+  IconData _getIconForEstado(ArticuloEstado estado) {
+    switch (estado) {
+      case ArticuloEstado.disponible:
+        return Icons.check_circle;
+      case ArticuloEstado.alquilado:
+        return Icons.schedule;
+      case ArticuloEstado.mantenimiento:
+        return Icons.build;
+      case ArticuloEstado.perdido:
+        return Icons.cancel;
+    }
+  }
+
+  String _formatTiempoRestante(DateTime fechaFin) {
+    final ahora = DateTime.now();
+    if (fechaFin.isBefore(ahora)) {
+      return 'Listo';
+    }
+
+    final diferencia = fechaFin.difference(ahora);
+    if (diferencia.inHours < 1) {
+      return '${diferencia.inMinutes}min';
+    } else if (diferencia.inHours < 24) {
+      return '${diferencia.inHours}h ${diferencia.inMinutes % 60}min';
+    } else {
+      return '${diferencia.inDays}d ${diferencia.inHours % 24}h';
+    }
+  }
+
   Widget _buildEmptyState(String item, IconData icon) {
     return Center(
       child: Column(
@@ -237,6 +424,8 @@ class _InventarioScreenState extends State<InventarioScreen>
         return Colors.orange;
       case ArticuloEstado.mantenimiento:
         return Colors.amber;
+      case ArticuloEstado.perdido:
+        return Colors.red;
     }
   }
 

@@ -119,7 +119,7 @@ class _CitasScreenState extends State<CitasScreen>
               title: Text(cita.cliente?.nombreCompleto ?? 'Sin nombre'),
               subtitle: Text(
                 '${_dateFormat.format(cita.fechaHora)}\n'
-                'Tipo: ${_getTipoCitaText(cita.tipoCita.name)}\n'
+                'Tipo: ${cita.tipoCita.displayName}\n'
                 'DNI: ${cita.cliente?.dni ?? 'N/A'}',
               ),
               trailing: isPendiente
@@ -140,36 +140,27 @@ class _CitasScreenState extends State<CitasScreen>
 
   Color _getTipoCitaColor(TipoCita tipo) {
     switch (tipo) {
+      case TipoCita.pruebas:
+        return Colors.orange;
+      case TipoCita.tomaMedidas:
+        return Colors.green;
       case TipoCita.alquiler:
         return Colors.blue;
-      case TipoCita.devolucion:
-        return Colors.green;
-      case TipoCita.prueba:
-        return Colors.orange;
+      case TipoCita.otros:
+        return Colors.grey;
     }
   }
 
   IconData _getTipoCitaIcon(TipoCita tipo) {
     switch (tipo) {
+      case TipoCita.pruebas:
+        return Icons.science;
+      case TipoCita.tomaMedidas:
+        return Icons.straighten;
       case TipoCita.alquiler:
         return Icons.card_travel;
-      case TipoCita.devolucion:
-        return Icons.assignment_return;
-      case TipoCita.prueba:
-        return Icons.checkroom;
-    }
-  }
-
-  String _getTipoCitaText(String tipo) {
-    switch (tipo) {
-      case 'alquiler':
-        return 'Alquiler';
-      case 'devolucion':
-        return 'Devolución';
-      case 'prueba':
-        return 'Prueba';
-      default:
-        return tipo.toUpperCase();
+      case TipoCita.otros:
+        return Icons.more_horiz;
     }
   }
 
@@ -252,7 +243,7 @@ class _CitasScreenState extends State<CitasScreen>
               ),
               _DetailRow(
                 title: 'Tipo de Cita',
-                value: _getTipoCitaText(cita.tipoCita.name),
+                value: cita.tipoCita.displayName,
               ),
               if (cita.descripcion != null && cita.descripcion!.isNotEmpty) ...[
                 const SizedBox(height: 8),

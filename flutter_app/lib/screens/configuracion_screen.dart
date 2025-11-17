@@ -102,37 +102,66 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
               return Column(
                 children: [
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.monetization_on),
-                      title: const Text('Garantía'),
-                      subtitle: Text(_formatConfig(
-                          config.garantiaTipo, config.garantiaValor)),
+                  _ConfigCard(
+                    icon: Icons.shield,
+                    title: 'Garantía',
+                    value: config.garantiaValor,
+                    suffix: 'soles',
+                    onEdit: () => _editValue(
+                      context,
+                      'Garantía',
+                      config.garantiaValor,
+                      (value) => provider.updateConfiguracion(
+                        garantiaValor: value,
+                      ),
+                    ),
+                  ),
+                  _ConfigCard(
+                    icon: Icons.warning,
+                    title: 'Mora Diaria',
+                    value: config.moraValor,
+                    suffix: 'soles/día',
+                    onEdit: () => _editValue(
+                      context,
+                      'Mora por Día',
+                      config.moraValor,
+                      (value) => provider.updateConfiguracion(
+                        moraValor: value,
+                      ),
+                    ),
+                  ),
+                  _ConfigCard(
+                    icon: Icons.calendar_today,
+                    title: 'Días Máximos de Mora',
+                    value: config.moraDiasMaximos.toDouble(),
+                    suffix: 'días',
+                    isInteger: true,
+                    onEdit: () => _editValue(
+                      context,
+                      'Días Máximos de Mora',
+                      config.moraDiasMaximos.toDouble(),
+                      (value) => provider.updateConfiguracion(
+                        moraDiasMaximos: value.toInt(),
+                      ),
+                      isInteger: true,
                     ),
                   ),
                   Card(
+                    color: Colors.blue.shade50,
                     child: ListTile(
-                      leading: const Icon(Icons.warning),
-                      title: const Text('Mora por Día'),
+                      leading:
+                          const Icon(Icons.info_outline, color: Colors.blue),
+                      title: const Text('Mora Máxima Posible'),
                       subtitle: Text(
-                          _formatConfig(config.moraTipo, config.moraValor)),
-                    ),
-                  ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.warning_amber),
-                      title: const Text('Mora Máxima'),
-                      subtitle: Text(
-                          NumberFormat.currency(symbol: 'S/ ', decimalDigits: 2)
-                              .format(config.moraMaxima)),
-                    ),
-                  ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.update),
-                      title: const Text('Prolongación'),
-                      subtitle: Text(_formatConfig(
-                          config.prolongacionTipo, config.prolongacionValor)),
+                        NumberFormat.currency(symbol: 'S/ ', decimalDigits: 2)
+                            .format(config.moraMaximaPosible),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      trailing: Text(
+                        '${config.moraDiasMaximos} días × S/ ${config.moraValor}',
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 12),
+                      ),
                     ),
                   ),
                 ],
@@ -181,8 +210,94 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     );
   }
 
-  String _formatConfig(TipoValor tipo, double valor) {
-    final symbol = tipo == TipoValor.porcentaje ? '%' : 'S/';
-    return '${tipo.displayName}: ${NumberFormat.currency(symbol: "$symbol ", decimalDigits: 2).format(valor)}';
+  Future<void> _editValue(
+    BuildContext context,
+    String title,
+    double currentValue,
+    Future<void> Function(double) onSave, {
+    bool isInteger = false,
+  }) async {
+    final controller = TextEditingController(
+      text:
+          isInteger ? currentValue.toInt().toString() : currentValue.toString(),
+    );
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Editar $title'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.numberWithOptions(decimal: !isInteger),
+          decoration: InputDecoration(
+            labelText: title,
+            border: const OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = double.tryParse(controller.text);
+              if (value != null && value >= 0) {
+                Navigator.pop(context, value);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Valor inválido')),
+                );
+              }
+            },
+            child: const Text('GUARDAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      await onSave(result);
+    }
+  }
+}
+
+class _ConfigCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final double value;
+  final String suffix;
+  final VoidCallback onEdit;
+  final bool isInteger;
+
+  const _ConfigCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.suffix,
+    required this.onEdit,
+    this.isInteger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final displayValue =
+        isInteger ? value.toInt().toString() : value.toStringAsFixed(2);
+
+    return Card(
+      child: ListTile(
+        leading: Icon(icon, color: Theme.of(context).primaryColor),
+        title: Text(title),
+        subtitle: Text(
+          '$displayValue $suffix',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.edit),
+          onPressed: onEdit,
+        ),
+      ),
+    );
   }
 }

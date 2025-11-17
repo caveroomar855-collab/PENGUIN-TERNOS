@@ -460,7 +460,7 @@ class _NuevoTrajeScreenState extends State<NuevoTrajeScreen> {
             const SizedBox(height: 12),
             _buildArticuloCard('saco', Icons.dry_cleaning, 'Saco'),
             const SizedBox(height: 8),
-            _buildArticuloCard('pantalon', Icons.downhill_skiing, 'Pantalón'),
+            _buildArticuloCard('pantalon', Icons.accessibility, 'Pantalón'),
             const SizedBox(height: 8),
             _buildArticuloCard('camisa', Icons.checkroom, 'Camisa'),
             const SizedBox(height: 8),

@@ -57,4 +57,31 @@ class ClientesService {
       throw Exception('Error al eliminar cliente: $e');
     }
   }
+
+  static Future<List<Cliente>> getPapelera() async {
+    try {
+      final response = await ApiService.get('/clientes/papelera');
+      final List<dynamic> data = response.data;
+      return data.map((json) => Cliente.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Error al obtener papelera: $e');
+    }
+  }
+
+  static Future<Cliente> restore(String id) async {
+    try {
+      final response = await ApiService.put('/clientes/$id/restore', data: {});
+      return Cliente.fromJson(response.data);
+    } catch (e) {
+      throw Exception('Error al restaurar cliente: $e');
+    }
+  }
+
+  static Future<void> deletePermanently(String id) async {
+    try {
+      await ApiService.delete('/clientes/$id/permanently');
+    } catch (e) {
+      throw Exception('Error al eliminar permanentemente: $e');
+    }
+  }
 }

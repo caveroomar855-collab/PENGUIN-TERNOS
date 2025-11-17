@@ -88,7 +88,7 @@ class _VentasScreenState extends State<VentasScreen> {
                         ),
                       ),
                       Text(
-                        venta.medioPago.name.toUpperCase(),
+                        venta.medioPago.displayName,
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey[600],
@@ -122,42 +122,163 @@ class _VentasScreenState extends State<VentasScreen> {
   void _showVentaDetails(BuildContext context, dynamic venta) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Detalles de la Venta',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Detalles de la Venta',
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // Cliente info
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('CLIENTE',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            _DetailRow(
+                                title: 'Nombre',
+                                value: venta.cliente?.nombreCompleto ?? 'N/A'),
+                            _DetailRow(
+                                title: 'DNI',
+                                value: venta.cliente?.dni ?? 'N/A'),
+                            _DetailRow(
+                                title: 'Teléfono',
+                                value: venta.cliente?.telefono ?? 'N/A'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Fecha y pago
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('INFORMACIÓN',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            _DetailRow(
+                                title: 'Fecha',
+                                value: _dateFormat.format(venta.fechaVenta)),
+                            _DetailRow(
+                                title: 'Medio de Pago',
+                                value: venta.medioPago.displayName),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Items vendidos
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('ARTÍCULOS (${venta.items?.length ?? 0})',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            if (venta.items != null &&
+                                venta.items.isNotEmpty) ...[
+                              ...venta.items.map((item) {
+                                final articulo = item.articulo;
+                                final articuloId = item.articuloId;
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.checkroom,
+                                                size: 16,
+                                                color: Colors.grey[600]),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(articulo?.nombre ??
+                                                  'Artículo ${articuloId.length >= 8 ? articuloId.substring(0, 8) : articuloId}'),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                          'S/ ${(item.articulo?.precioVenta ?? 0).toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ] else ...[
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text('No hay artículos en esta venta',
+                                    style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontStyle: FontStyle.italic)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Total
+                    Card(
+                      color: Colors.green.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: _DetailRow(
+                          title: 'TOTAL',
+                          value: _currencyFormat.format(venta.montoTotal),
+                          isTotal: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              _DetailRow(
-                  title: 'Cliente',
-                  value: venta.cliente?.nombreCompleto ?? 'N/A'),
-              _DetailRow(title: 'DNI', value: venta.cliente?.dni ?? 'N/A'),
-              _DetailRow(
-                  title: 'Teléfono', value: venta.cliente?.telefono ?? 'N/A'),
-              _DetailRow(
-                title: 'Fecha',
-                value: _dateFormat.format(venta.fechaVenta),
-              ),
-              _DetailRow(
-                title: 'Medio de Pago',
-                value: venta.medioPago.name.toUpperCase(),
-              ),
-              const Divider(height: 24),
-              _DetailRow(
-                title: 'Total',
-                value: _currencyFormat.format(venta.montoTotal),
-                isTotal: true,
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

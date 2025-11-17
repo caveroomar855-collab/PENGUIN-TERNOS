@@ -20,11 +20,13 @@ class VentaItem {
       id: json['id'],
       ventaId: json['venta_id'],
       articuloId: json['articulo_id'],
-      articulo: json['articulo'] != null
-          ? Articulo.fromJson(json['articulo'])
-          : null,
+      articulo:
+          json['articulo'] != null ? Articulo.fromJson(json['articulo']) : null,
     );
   }
+
+  // Obtener precio del artículo
+  double get precio => articulo?.precioVenta ?? 0;
 }
 
 class Venta {
@@ -54,9 +56,8 @@ class Venta {
     return Venta(
       id: json['id'],
       clienteId: json['cliente_id'],
-      cliente: json['cliente'] != null
-          ? Cliente.fromJson(json['cliente'])
-          : null,
+      cliente:
+          json['cliente'] != null ? Cliente.fromJson(json['cliente']) : null,
       fechaVenta: DateTime.parse(json['fecha_venta']),
       medioPago: MedioPago.fromString(json['medio_pago']),
       montoTotal: (json['monto_total'] as num).toDouble(),

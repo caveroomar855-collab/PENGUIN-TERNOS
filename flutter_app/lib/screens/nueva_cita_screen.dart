@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/citas_provider.dart';
+import '../providers/clientes_provider.dart';
+import '../models/cliente.dart';
+import '../services/clientes_service.dart';
 
 class NuevaCitaScreen extends StatefulWidget {
   const NuevaCitaScreen({Key? key}) : super(key: key);
@@ -19,13 +22,26 @@ class _NuevaCitaScreenState extends State<NuevaCitaScreen> {
   final _correoController = TextEditingController();
   final _descripcionController = TextEditingController();
 
-  String _tipoCitaSeleccionado = 'alquiler';
+  String _tipoCitaSeleccionado = 'pruebas';
   DateTime _fechaSeleccionada = DateTime.now();
   TimeOfDay _horaSeleccionada = TimeOfDay.now();
   bool _isLoading = false;
   bool _clienteExistente = false;
+  Cliente? _clienteEncontrado;
 
   final List<Map<String, dynamic>> _tiposCita = [
+    {
+      'value': 'pruebas',
+      'label': 'Pruebas',
+      'icon': Icons.science,
+      'color': Colors.orange
+    },
+    {
+      'value': 'toma_medidas',
+      'label': 'Toma de Medidas',
+      'icon': Icons.straighten,
+      'color': Colors.green
+    },
     {
       'value': 'alquiler',
       'label': 'Alquiler',
@@ -33,16 +49,10 @@ class _NuevaCitaScreenState extends State<NuevaCitaScreen> {
       'color': Colors.blue
     },
     {
-      'value': 'devolucion',
-      'label': 'Devolución',
-      'icon': Icons.assignment_return,
-      'color': Colors.green
-    },
-    {
-      'value': 'prueba',
-      'label': 'Prueba',
-      'icon': Icons.checkroom,
-      'color': Colors.orange
+      'value': 'otros',
+      'label': 'Otros',
+      'icon': Icons.more_horiz,
+      'color': Colors.grey
     },
   ];
 
@@ -60,10 +70,48 @@ class _NuevaCitaScreenState extends State<NuevaCitaScreen> {
     final dni = _dniController.text.trim();
     if (dni.length != 8) return;
 
-    // TODO: Buscar cliente por DNI
-    setState(() {
-      _clienteExistente = false;
-    });
+    setState(() => _isLoading = true);
+
+    try {
+      // Buscar cliente por DNI
+      final cliente = await ClientesService.getByDni(dni);
+
+      if (cliente != null) {
+        setState(() {
+          _clienteEncontrado = cliente;
+          _clienteExistente = true;
+          _nombreController.text = cliente.nombreCompleto;
+          _telefonoController.text = cliente.telefono;
+          _correoController.text = cliente.correo ?? '';
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cliente encontrado'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _clienteEncontrado = null;
+          _clienteExistente = false;
+          _nombreController.clear();
+          _telefonoController.clear();
+          _correoController.clear();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _seleccionarFecha() async {
@@ -96,8 +144,44 @@ class _NuevaCitaScreenState extends State<NuevaCitaScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Crear cita
-      await Future.delayed(const Duration(seconds: 1));
+      String clienteId;
+
+      // Si el cliente no existe, crearlo primero
+      if (_clienteEncontrado == null) {
+        final clienteData = {
+          'dni': _dniController.text.trim(),
+          'nombre_completo': _nombreController.text.trim(),
+          'telefono': _telefonoController.text.trim(),
+          'correo': _correoController.text.trim().isEmpty
+              ? null
+              : _correoController.text.trim(),
+        };
+
+        final nuevoCliente = await ClientesService.create(clienteData);
+        clienteId = nuevoCliente.id;
+      } else {
+        clienteId = _clienteEncontrado!.id;
+      }
+
+      // Combinar fecha y hora
+      final fechaHora = DateTime(
+        _fechaSeleccionada.year,
+        _fechaSeleccionada.month,
+        _fechaSeleccionada.day,
+        _horaSeleccionada.hour,
+        _horaSeleccionada.minute,
+      );
+
+      final data = {
+        'cliente_id': clienteId,
+        'tipo_cita': _tipoCitaSeleccionado,
+        'fecha_hora': fechaHora.toIso8601String(),
+        'descripcion': _descripcionController.text.trim().isEmpty
+            ? null
+            : _descripcionController.text.trim(),
+      };
+
+      await context.read<CitasProvider>().createCita(data);
 
       if (mounted) {
         Navigator.pop(context);
@@ -107,7 +191,6 @@ class _NuevaCitaScreenState extends State<NuevaCitaScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        context.read<CitasProvider>().fetchCitas();
       }
     } catch (e) {
       if (mounted) {
@@ -273,6 +356,9 @@ class _NuevaCitaScreenState extends State<NuevaCitaScreen> {
                         }
                         if (value.length != 9) {
                           return 'El teléfono debe tener 9 dígitos';
+                        }
+                        if (!value.startsWith('9')) {
+                          return 'El teléfono debe empezar con 9';
                         }
                         return null;
                       },

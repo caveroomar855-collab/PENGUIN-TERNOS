@@ -26,8 +26,17 @@ class ConfiguracionProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateConfiguracion(Map<String, dynamic> data) async {
+  Future<bool> updateConfiguracion({
+    double? garantiaValor,
+    double? moraValor,
+    int? moraDiasMaximos,
+  }) async {
     try {
+      final data = <String, dynamic>{};
+      if (garantiaValor != null) data['garantia_valor'] = garantiaValor;
+      if (moraValor != null) data['mora_valor'] = moraValor;
+      if (moraDiasMaximos != null) data['mora_dias_maximos'] = moraDiasMaximos;
+
       _configuracion = await ConfiguracionService.update(data);
       notifyListeners();
       return true;
@@ -42,11 +51,7 @@ class ConfiguracionProvider extends ChangeNotifier {
     return _configuracion?.calcularGarantia(monto) ?? 0;
   }
 
-  double calcularMora(double monto, int dias) {
-    return _configuracion?.calcularMora(monto, dias) ?? 0;
-  }
-
-  double calcularProlongacion(double monto, int dias) {
-    return _configuracion?.calcularProlongacion(monto, dias) ?? 0;
+  double calcularMora(int diasAtraso) {
+    return _configuracion?.calcularMora(diasAtraso) ?? 0;
   }
 }

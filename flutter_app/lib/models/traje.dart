@@ -7,6 +7,8 @@ class Traje {
   final double precioAlquiler;
   final double precioVenta;
   final bool disponible;
+  final ArticuloEstado estado;
+  final DateTime? fechaFinMantenimiento;
   final List<Articulo> articulos;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -18,6 +20,8 @@ class Traje {
     required this.precioAlquiler,
     required this.precioVenta,
     required this.disponible,
+    required this.estado,
+    this.fechaFinMantenimiento,
     this.articulos = const [],
     required this.createdAt,
     required this.updatedAt,
@@ -30,11 +34,17 @@ class Traje {
       descripcion: json['descripcion'],
       precioAlquiler: (json['precio_alquiler'] as num).toDouble(),
       precioVenta: (json['precio_venta'] as num).toDouble(),
-      disponible: json['disponible'],
+      disponible: json['disponible'] ?? true,
+      estado: json['estado'] != null
+          ? ArticuloEstado.fromString(json['estado'])
+          : ArticuloEstado.disponible,
+      fechaFinMantenimiento: json['fecha_fin_mantenimiento'] != null
+          ? DateTime.parse(json['fecha_fin_mantenimiento'])
+          : null,
       articulos: json['articulos'] != null
           ? (json['articulos'] as List)
-                .map((a) => Articulo.fromJson(a))
-                .toList()
+              .map((a) => Articulo.fromJson(a))
+              .toList()
           : [],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
